@@ -1,6 +1,6 @@
 import random
 from flask import Flask, request, render_template, flash, redirect
-from flask_login import LoginManager, login_user, current_user, UserMixin, login_required, logout_user
+from flask_login import LoginManager, login_user, UserMixin, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
@@ -29,7 +29,6 @@ def info():
 # Login
 @app.route('/login')
 def login():
-
     form = LoginForm()
     return render_template("login.html", form=form)
 
