@@ -3,10 +3,8 @@ import pickle
 # import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-import midi2audio
+# import tensorflow as tf
 from midi2audio import FluidSynth
-# from tensorflow import keras
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
 from keras.utils import np_utils
@@ -14,8 +12,7 @@ from keras.callbacks import ModelCheckpoint
 from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment
 
 MODEL_DIR = 'g:/My Drive/MLData'
-# Check for available GPU
-print("GPU", "available!" if tf.config.list_physical_devices("GPU") else "not available!")
+MODEL_DIR2 = 'c:/MLData'
 
 # Commented out IPython magic to ensure Python compatibility.
 # !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
@@ -32,6 +29,7 @@ us = environment.UserSettings()
 us['musicxmlPath'] = 'g:/My Drive/apps/MuseScore/MuseScorePortable.exe'
 us['musescoreDirectPNGPath'] = 'g:/My Drive/apps/MuseScore/MuseScorePortable.exe'
 us['graphicsPath'] = MODEL_DIR  # should be the application to open png file when using lilypond
+us['lilypondPath'] = 'C:/Program Files (x86)/LilyPond/usr/bin/lilypond.exe'
 
 
 # us['directoryScratch'] = 'drive/MyDrive/MLData/output' # Where to output temporary png files
@@ -87,13 +85,15 @@ def generate_song(model, nn_input, note_names, n_vocab):
     # Display Music Score
     # s1.show('musicxml.png')
     # s1.show()
-    s1.write('musicxml.png', MODEL_DIR + '/output.png')
+    # s1.write('musicxml.png', MODEL_DIR + '/output.png') # file ends up being named output-1.png
+    # s1.show('lily.png') # needs application path environment set
+    s1.write('lily.png', "c:\MLData\score")
     # Create midi file from notes
-    fp = s1.write('midi', fp=MODEL_DIR + '/output.mid')
+    fp = s1.write('midi', fp=MODEL_DIR2 + '/output.mid')
     # Convert midi file to audio
-    fs = FluidSynth('g:/My Drive/pianosf/Yamaha-Grand-Lite-v2.0.sf2')
-    # fs.play_midi(MODEL_DIR + '/output.mid')
-    fs.midi_to_audio(MODEL_DIR + '/output.mid', MODEL_DIR + '/output.wav')
+    fs = FluidSynth('c:\MLData\Yamaha-Grand-Lite-v2.0.sf2')
+    # fs.play_midi(MODEL_DIR2 + '/output.mid')
+    # fs.midi_to_audio(MODEL_DIR2 + '/output.mid', MODEL_DIR2 + '/output.wav')
 
 
 def get_notes(model, nn_input, note_names, n_vocab):
@@ -138,6 +138,8 @@ def create_model(nn_input, n_vocab):
 
 
 def train_network(nn_input, nn_output, model):
+    # One-hot encode nn_output
+    nn_output = np_utils.to_categorical(nn_output)
     # train the network
     weightsfile = MODEL_DIR + '/weights/weights-{epoch:02d}-{loss:.4f}.hdf5'
     checkpoint = ModelCheckpoint(weightsfile, monitor='loss', verbose=0, save_best_only=True, mode='min')
@@ -160,7 +162,7 @@ def init_network():
     with open(MODEL_DIR + '/notes', 'rb') as filepath:
         notes = np.array(pickle.load(filepath))
     # set length of sequence
-    sq_length = 8
+    sq_length = 10
     # get amount of unique notes
     n_vocab = len(set(notes))
     # get sorted note names
@@ -181,8 +183,6 @@ def init_network():
     # format input for compatibility with LSTM layers
     nn_input = np.reshape(nn_input, (len(nn_input), sq_length, 1))
     nn_input = nn_input / float(n_vocab)
-    # One-hot encode nn_output
-    nn_output = np_utils.to_categorical(nn_output)
 
     # create model
     model = create_model(nn_input, n_vocab)
