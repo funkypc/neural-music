@@ -1,4 +1,5 @@
 import random
+import nn
 from flask import Flask, request, render_template, flash, redirect
 from flask_login import LoginManager, login_user, UserMixin, login_required, logout_user
 from flask_wtf import FlaskForm
