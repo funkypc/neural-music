@@ -2,17 +2,23 @@ import glob
 import pickle
 # import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # import tensorflow as tf
-from midi2audio import FluidSynth
+# from midi2audio import FluidSynth
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
 from keras.utils import np_utils
 from keras.callbacks import ModelCheckpoint
-from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment
+from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment, meter
+
+model = None
+nn_input = None
+note_names = None
+n_vocab = None
 
 MODEL_DIR = 'g:/My Drive/MLData'
 MODEL_DIR2 = 'c:/MLData'
+GENERATED_DIR = 'C:/Users/User/projects/Python/Flask-App/static'
 
 # Commented out IPython magic to ensure Python compatibility.
 # !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
@@ -48,9 +54,9 @@ def parse_midi():
 
 
 # Converts all midi data in the same key
-def change_key(stream):
+def change_key(stream, key_sig='C'):
     k = stream.analyze('key')
-    i = interval.Interval(k.getScale('major').tonic, pitch.Pitch('C'))
+    i = interval.Interval(k.getScale('major').tonic, pitch.Pitch(key_sig))
     sNew = stream.transpose(i)
     return sNew
 
@@ -74,35 +80,44 @@ def parse_notes(stream):
     return notes
 
 
-def generate_song(model, nn_input, note_names, n_vocab):
+# def generate_song(model, nn_input, note_names, n_vocab):
+def generate_song(transpose=0, time_sig=44, length=64):
     # Get notes from neural network
-    notes = get_notes(model, nn_input, note_names, n_vocab)
+    notes = get_notes(model, nn_input, note_names, n_vocab, time_sig, length)
     s1 = stream.Stream()
+    # Set Time Signature
+    ts = meter.TimeSignature('4/4')
+    if time_sig == 24:
+        ts = meter.TimeSignature('2/4')
+    elif time_sig == 34:
+        ts = meter.TimeSignature('3/4')
+    s1.insert(0, ts)
     # Write notes to MIDI file
     for n in notes:
         # Append all notes as quarter notes
         s1.append(note.Note(n, type='quarter'))
-    # Display Music Score
-    # s1.show('musicxml.png')
-    # s1.show()
-    # s1.write('musicxml.png', MODEL_DIR + '/output.png') # file ends up being named output-1.png
-    # s1.show('lily.png') # needs application path environment set
-    s1.write('lily.png', "c:\MLData\score")
+    # Generate Music Score using lilypond - not needed. Done in html and js
+    # s1.write('lily.png', GENERATED_DIR + '/score')  # generates score.png
+    # Transpose notes
+    if transpose != 0:
+        a_interval = interval.Interval(transpose)
+        s1.transpose(a_interval, inPlace=True)
     # Create midi file from notes
-    fp = s1.write('midi', fp=MODEL_DIR2 + '/output.mid')
-    # Convert midi file to audio
-    fs = FluidSynth('c:\MLData\Yamaha-Grand-Lite-v2.0.sf2')
-    # fs.play_midi(MODEL_DIR2 + '/output.mid')
-    # fs.midi_to_audio(MODEL_DIR2 + '/output.mid', MODEL_DIR2 + '/output.wav')
+    fp = s1.write('midi', fp=GENERATED_DIR + '/output.mid')
+    # Convert midi file to audio using FluidSynth - Not needed. Done in html and js
+    # fs = FluidSynth('c:\MLData\Yamaha-Grand-Lite-v2.0.sf2')
+    # fs.play_midi(GENERATED_DIR + '/output.mid')
+    # fs.midi_to_audio(GENERATED_DIR + '/output.mid', GENERATED_DIR + '/output.wav')
 
 
-def get_notes(model, nn_input, note_names, n_vocab):
+def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
     # choose a random starting note
-    random_start = np.random.randint(0, len(nn_input) - 1)
+    # random_start = np.random.randint(0, len(nn_input) - 1)
+    random_start = np.random.randint(0, 200)
     sequence = nn_input[random_start]
     output = []
-    # generate 64 notes
-    for i in range(64):
+    # generate notes
+    for i in range(length):
         inputs = np.reshape(sequence, (1, len(sequence), 1))
         inputs = inputs / float(n_vocab)
         prediction = model.predict(inputs, verbose=0)
@@ -114,22 +129,30 @@ def get_notes(model, nn_input, note_names, n_vocab):
     return output
 
 
+def get_plot():
+    s1 = stream.Stream()
+    for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
+        s1.append(converter.parse(filename))
+    return s1.plot('scatter', 'offset', 'pitchClass')
+
+
+
 def create_model(nn_input, n_vocab):
     # Generate notes using neural network
-    # Create model # TODO cleanup
+    # Create model
     model1 = Sequential()
     model1.add(LSTM(
         512, input_shape=(nn_input.shape[1], nn_input.shape[2]),
-        recurrent_dropout=0.3, return_sequences=True
+        recurrent_dropout=0.2, return_sequences=True
     ))
-    model1.add(LSTM(512, return_sequences=True, recurrent_dropout=0.3, ))
+    model1.add(LSTM(512, return_sequences=True, recurrent_dropout=0.1, ))
     model1.add(LSTM(512))
     model1.add(BatchNorm())
-    model1.add(Dropout(0.3))
+    model1.add(Dropout(0.1))
     model1.add(Dense(256))
     model1.add(Activation('relu'))
     model1.add(BatchNorm())
-    model1.add(Dropout(0.3))
+    model1.add(Dropout(0.4))
     model1.add(Dense(n_vocab))
     model1.add(Activation('softmax'))
     model1.compile(loss='categorical_crossentropy', optimizer='rmsprop')
@@ -151,18 +174,23 @@ def train_network(nn_input, nn_output, model):
     # Save history to plot from later
     with open('/trainHistoryDict', 'wb') as file_pi:
         pickle.dump(history.history, file_pi)
-    plt.plot(history.history['loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.show()
+    # Uncomment to plot history
+    # plt.plot(history.history['loss'])
+    # plt.title('model loss')
+    # plt.ylabel('loss')
+    # plt.xlabel('epoch')
+    # plt.show()
 
 
 def init_network():
+    global model
+    global nn_input
+    global note_names
+    global n_vocab
     with open(MODEL_DIR + '/notes', 'rb') as filepath:
         notes = np.array(pickle.load(filepath))
     # set length of sequence
-    sq_length = 10
+    sq_length = np.random.randint(5, 10)
     # get amount of unique notes
     n_vocab = len(set(notes))
     # get sorted note names
@@ -187,10 +215,9 @@ def init_network():
     # create model
     model = create_model(nn_input, n_vocab)
 
-    # Generate Song
+    # Load Weights
     model.load_weights(
-        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')  # Todo: try **weights-82-0.4268**
-    generate_song(model, nn_input, note_names, n_vocab)  # uncomment to generate song
+        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')  # Todo: try weights-82-0.4268 weights-136-0.1883.hdf5
 
     # Train the network
     # train_network(nn_input, nn_output, model) # Uncomment to retrain the network
@@ -198,3 +225,4 @@ def init_network():
 
 if __name__ == "__main__":
     init_network()
+    generate_song()

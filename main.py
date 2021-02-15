@@ -1,30 +1,72 @@
+import base64
 import random
 import nn
-from flask import Flask, request, render_template, flash, redirect
+import numpy as np
+import pickle
+from io import BytesIO
+from flask import Flask, request, render_template, flash, redirect, send_from_directory
 from flask_login import LoginManager, login_user, UserMixin, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
+from matplotlib.figure import Figure
 
 app = Flask(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "/login"
 app.secret_key = b'_6#e4F"S2Z8z\n\xec]/'
+song = None
 
 
 # Index
 @app.route('/')
 @login_required
 def index():
-    return render_template("index.html")
+    nn.init_network()  # init the neural network
+    return render_template("index.html", generate_song=generate_song, song=song)
 
 
-# Info
-@app.route('/info')
+# Get figure for visualization
+def get_figure(name):
+    # Generate figure
+    if name is "note_frequency":
+        fig = Figure(figsize=(14, 5))
+        fig.suptitle("Note Frequency")
+        ax = fig.subplots()
+        with open(nn.MODEL_DIR + '/notes', 'rb') as filepath:
+            notes = np.array(pickle.load(filepath))
+        unique, counts = np.unique(notes, return_counts=True)
+        ax.bar(unique, counts)
+    elif name is "key_frequency":
+        fig = Figure()
+        fig.suptitle("Key Signature Frequency")
+        ax = fig.subplots()
+        ax.plot([1, 2])
+    elif name is "midi_data":
+        nn.get_plot()
+    else:
+        fig = Figure()
+        fig.suptitle("Generic Title")
+        ax = fig.subplots()
+        ax.plot([1, 2])
+
+    # ax.plot(notes, np.arange(len(notes)))
+    # ax.scatter(unique, counts)
+
+    # Save to temporary buffer
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    # Embed result in html output
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return f"<img src='data:image/png;base64,{data}' style='max-width:100%'/>"
+
+
+# Visualization
+@app.route('/visualization')
 @login_required
-def info():
-    return "info"
+def visualization():
+    return render_template("visualization.html", get_figure=get_figure)
 
 
 # Login
@@ -63,17 +105,39 @@ def logout():
     return redirect("/login")
 
 
+@app.route('/generate_song')
+@app.route('/generate_song/<path:transpose>/<path:time_sig>/<path:length>')
+@login_required
+def generate_song(transpose=0, time_sig=44, length=32):
+    if request.args.get('length', ''):
+        length = request.args.get('length', '')
+    if request.args.get('time_sig', ''):
+        time_sig = request.args.get('time_sig', '')
+    if request.args.get('transpose', ''):
+        transpose = request.args.get('transpose', '')
+    nn.generate_song(int(transpose), int(time_sig), int(length))
+    global song
+    song = True
+    return redirect("/")
+
+
+@app.route('/media/<path:filename>')
+@login_required
+def get_media(filename):
+    return send_from_directory('static/', filename, cache_timeout=0)
+
+
 # Class to create login form
 class LoginForm(FlaskForm):
     username = StringField(
-        'Username',
+        '',
         [DataRequired()]
     )
     password = PasswordField(
-        'Password ',
+        '',
         [DataRequired()]
     )
-    submit = SubmitField('Submit')
+    submit = SubmitField('Sign in')
 
 
 # Class to create default user
