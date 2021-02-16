@@ -7,3 +7,4 @@ music21
 Flask
 WTForms
 matplotlib
+tensorflow >= 2.2
