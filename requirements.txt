@@ -6,6 +6,7 @@ Keras==2.3.0
 music21
 Flask
 flask_login
+flask_wtf
 WTForms
 matplotlib
 h5py~=2.10.0
