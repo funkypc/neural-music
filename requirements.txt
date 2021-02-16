@@ -1,4 +1,4 @@
-pandas~=1.2.2
+pandas
 numpy~=1.20.1
 prince~=0.7.1
 Keras~=2.4.3
