@@ -23,50 +23,14 @@ song = None
 @app.route('/')
 @login_required
 def index():
-    nn.init_network()  # init the neural network
     return render_template("index.html", generate_song=generate_song, song=song)
-
-
-# Get figure for visualization
-def get_figure(name):
-    # Generate figure
-    if name is "note_frequency":
-        fig = Figure(figsize=(14, 5))
-        fig.suptitle("Note Frequency")
-        ax = fig.subplots()
-        with open(nn.MODEL_DIR + '/notes', 'rb') as filepath:
-            notes = np.array(pickle.load(filepath))
-        unique, counts = np.unique(notes, return_counts=True)
-        ax.bar(unique, counts)
-    elif name is "key_frequency":
-        fig = Figure()
-        fig.suptitle("Key Signature Frequency")
-        ax = fig.subplots()
-        ax.plot([1, 2])
-    elif name is "midi_data":
-        nn.get_plot()
-    else:
-        fig = Figure()
-        fig.suptitle("Generic Title")
-        ax = fig.subplots()
-        ax.plot([1, 2])
-
-    # ax.plot(notes, np.arange(len(notes)))
-    # ax.scatter(unique, counts)
-
-    # Save to temporary buffer
-    buf = BytesIO()
-    fig.savefig(buf, format="png")
-    # Embed result in html output
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    return f"<img src='data:image/png;base64,{data}' style='max-width:100%'/>"
 
 
 # Visualization
 @app.route('/visualization')
 @login_required
 def visualization():
-    return render_template("visualization.html", get_figure=get_figure)
+    return render_template("visualization.html", get_figure=get_figure, get_model_summary=get_model_summary)
 
 
 # Login
@@ -127,6 +91,64 @@ def get_media(filename):
     return send_from_directory('static/', filename, cache_timeout=0)
 
 
+# Get figure for visualization
+def get_figure(name):
+    # Generate figure
+    if name is "note_frequency":
+        fig = Figure(figsize=(14, 5))
+        fig.suptitle("Note Frequency", fontsize=16)
+        ax = fig.subplots()
+        with open(nn.MODEL_DIR + '/notes', 'rb') as filepath:
+            notes = np.array(pickle.load(filepath))
+        unique, counts = np.unique(notes, return_counts=True)
+        ax.bar(unique, counts)
+    elif name is "key_frequency":
+        fig = Figure()
+        fig.suptitle("Key Signature Frequency")
+        ax = fig.subplots()
+        ax.plot([1, 2])
+    elif name is "midi_data":
+        # Generate Multiple Correspondence Analysis (MCA) graph
+        X, mca = nn.generate_mca_graph()
+        ax = mca.plot_coordinates(
+            X=X,
+            ax=None,
+            figsize=(20, 8),
+            show_row_points=True,
+            row_points_size=10,
+            show_row_labels=False,
+            show_column_points=True,
+            column_points_size=30,
+            show_column_labels=True,
+            legend_n_cols=1
+        )
+        fig = ax.get_figure()
+    else:
+        fig = Figure()
+        fig.suptitle("Generic Title")
+        ax = fig.subplots()
+        ax.plot([1, 2])
+
+    # ax.plot(notes, np.arange(len(notes)))
+    # ax.scatter(unique, counts)
+
+    # Save to temporary buffer
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    # Embed result in html output
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return f"<img src='data:image/png;base64,{data}' style='max-width:100%'/>"
+
+
+def get_model_summary():
+    summary = []
+    nn.model.summary(print_fn=lambda x: summary.append(x))
+    res = ''
+    for line in summary:
+        res += line + '<br>'
+    return res
+
+
 # Class to create login form
 class LoginForm(FlaskForm):
     username = StringField(
@@ -149,6 +171,8 @@ class User(UserMixin):
 
 # init app
 if __name__ == "__main__":
+    # init the neural network
+    nn.init_network()
     # create default user
     user = User()
     # Run app

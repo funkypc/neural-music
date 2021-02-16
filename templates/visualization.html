@@ -29,13 +29,21 @@
                 Clean and usable.
             </p>
             <div class="mt-5 mb-0">
+                <h4 class="mb-0">MCA Analysis of Data</h4>
+                {{ get_figure('midi_data')|safe }}
+            </div>
+            <div class="mt-5 mb-0">
                 {{ get_figure('note_frequency')|safe }}
             </div>
-            <div class="mt-5 mb-0">
-                {{ get_figure('bpm_frequency')|safe }}
+            <div class="mt-5">
+                <h4>Recurrent Neural Network Model Plot</h4>
+                <img src="{{ url_for('static', filename='model_plot.png') }}">
             </div>
             <div class="mt-5 mb-0">
-                {{ get_figure('midi_data')|safe }}
+                <h4>Recurrent Neural Network Model Summary</h4>
+                <code>
+                {{ get_model_summary()|safe }}
+                </code>
             </div>
         </div>
 

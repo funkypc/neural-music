@@ -1,15 +1,16 @@
 import glob
 import pickle
-# import pandas as pd
+import pandas as pd
 import numpy as np
+import prince
 # import matplotlib.pyplot as plt
 # import tensorflow as tf
 # from midi2audio import FluidSynth
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
-from keras.utils import np_utils
+from keras.utils import np_utils, plot_model
 from keras.callbacks import ModelCheckpoint
-from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment, meter
+from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment, meter, bar
 
 model = None
 nn_input = None
@@ -20,7 +21,6 @@ MODEL_DIR = 'g:/My Drive/MLData'
 MODEL_DIR2 = 'c:/MLData'
 GENERATED_DIR = 'C:/Users/User/projects/Python/Flask-App/static'
 
-# Commented out IPython magic to ensure Python compatibility.
 # !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
 # !sh lilypond-2.22.0-1.linux-64.sh
 
@@ -129,16 +129,67 @@ def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
     return output
 
 
-def get_plot():
-    s1 = stream.Stream()
-    for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
-        s1.append(converter.parse(filename))
-    return s1.plot('scatter', 'offset', 'pitchClass')
+def generate_mca_graph():
+    # Generate Multiple Correspondence Analysis (MCA) graph
+    df = get_stream_df()
+    X = df
+    mca = prince.MCA()
+    mca = mca.fit(X)
+    return X, mca
 
+
+def get_stream_df():
+    # Uncomment to recreate dataframe
+
+    # s1 = stream.Stream()
+    # for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
+    #     s1.append(converter.parse(filename))
+    # df = generate_dataframe(s1)
+    # df.to_pickle(MODEL_DIR + "/midi_df.pkl")
+
+    # Read DataFrame from file
+    df = pd.read_pickle(MODEL_DIR + "/midi_df.pkl")
+    # Drop NaN columns
+    df = df.dropna()
+    # Convert fields to numerical
+    df = df.astype({'Offset': 'float'})
+    df = df.astype({'Duration': 'float'})
+    # Cleanup outliers in Duration
+    df = df[np.abs(df.Duration - df.Duration.mean()) <= (3 * df.Duration.std())]  # keep to 3 standard deviations.
+    return df
+
+
+def generate_dataframe(part):
+    # parts = s.parts
+    rows_list = []
+    # for part in parts:
+    for index, elt in enumerate(part.flat.stripTies(retainContainers=True).getElementsByClass(
+            [note.Note, note.Rest, chord.Chord, bar.Barline])):
+        if hasattr(elt, 'pitches'):
+            pitches = elt.pitches
+            for pitch in pitches:
+                rows_list.append(generate_row(elt, part, pitch.pitchClass))
+            else:
+                rows_list.append(generate_row(elt, part))
+    return pd.DataFrame(rows_list)
+
+
+def generate_row(mus_object, part, pitch_class=np.nan):
+    d = {}
+    try:
+        pitch = mus_object.pitch
+    except:
+        pitch = None
+    d.update({'id': mus_object.id,
+              'Offset': mus_object.offset,
+              'Duration': mus_object.duration.quarterLength,
+              'Pitch': pitch,
+              'Pitch Class': pitch_class})
+    return d
 
 
 def create_model(nn_input, n_vocab):
-    # Generate notes using neural network
+    # Generate notes using Recurring Neural Network (RNN)
     # Create model
     model1 = Sequential()
     model1.add(LSTM(
@@ -161,7 +212,7 @@ def create_model(nn_input, n_vocab):
 
 
 def train_network(nn_input, nn_output, model):
-    # One-hot encode nn_output
+    # OneHotEncode nn_output
     nn_output = np_utils.to_categorical(nn_output)
     # train the network
     weightsfile = MODEL_DIR + '/weights/weights-{epoch:02d}-{loss:.4f}.hdf5'
@@ -218,6 +269,9 @@ def init_network():
     # Load Weights
     model.load_weights(
         MODEL_DIR + '/weights/weights-136-0.1883.hdf5')  # Todo: try weights-82-0.4268 weights-136-0.1883.hdf5
+
+    # Plot the model
+    # plot_model(model, to_file=GENERATED_DIR + '/model_plot.png', show_shapes=True, show_layer_names=True)
 
     # Train the network
     # train_network(nn_input, nn_output, model) # Uncomment to retrain the network
