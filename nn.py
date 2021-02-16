@@ -33,10 +33,10 @@ GENERATED_DIR = './static'
 # Create the user environment for music21
 # !whereis musescore
 us = environment.UserSettings()
-us['musicxmlPath'] = 'g:/My Drive/apps/MuseScore/MuseScorePortable.exe'
-us['musescoreDirectPNGPath'] = 'g:/My Drive/apps/MuseScore/MuseScorePortable.exe'
+us['musicxmlPath'] = MODEL_DIR
+us['musescoreDirectPNGPath'] = MODEL_DIR
 us['graphicsPath'] = MODEL_DIR  # should be the application to open png file when using lilypond
-us['lilypondPath'] = 'C:/Program Files (x86)/LilyPond/usr/bin/lilypond.exe'
+us['lilypondPath'] = MODEL_DIR
 
 
 # us['directoryScratch'] = 'drive/MyDrive/MLData/output' # Where to output temporary png files
