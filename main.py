@@ -96,7 +96,7 @@ def get_figure(name):
     # Generate figure
     if name is "note_frequency":
         fig = Figure(figsize=(14, 5))
-        fig.suptitle("Note Frequency", fontsize=16)
+        fig.suptitle("Note Frequency in Key of C", fontsize=18)
         ax = fig.subplots()
         with open(nn.MODEL_DIR + '/notes', 'rb') as filepath:
             notes = np.array(pickle.load(filepath))
@@ -128,9 +128,6 @@ def get_figure(name):
         fig.suptitle("Generic Title")
         ax = fig.subplots()
         ax.plot([1, 2])
-
-    # ax.plot(notes, np.arange(len(notes)))
-    # ax.scatter(unique, counts)
 
     # Save to temporary buffer
     buf = BytesIO()

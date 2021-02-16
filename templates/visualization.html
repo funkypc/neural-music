@@ -24,7 +24,7 @@
     <main role="main" class="container">
         <div class="starter-template">
             <h1>Visualization</h1>
-            <p class="lead">
+            <p class="lead mb-5">
                 Here's what the data looks like.<br>
                 Clean and usable.
             </p>
@@ -36,11 +36,11 @@
                 {{ get_figure('note_frequency')|safe }}
             </div>
             <div class="mt-5">
-                <h4>Recurrent Neural Network Model Plot</h4>
-                <img src="{{ url_for('static', filename='model_plot.png') }}">
+                <h4 class="mb-3">Recurrent Neural Network Model Plot</h4>
+                <img src="{{ url_for('static', filename='model_plot.png') }}" style='max-height:1000px'>
             </div>
             <div class="mt-5 mb-0">
-                <h4>Recurrent Neural Network Model Summary</h4>
+                <h4 class="mb-3">Recurrent Neural Network Model Summary</h4>
                 <code>
                 {{ get_model_summary()|safe }}
                 </code>
