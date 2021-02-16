@@ -2,9 +2,10 @@ gunicorn
 pandas
 numpy
 prince
-Keras
+Keras==2.3.0
 music21
 Flask
 WTForms
 matplotlib
-tensorflow >= 2.2
+h5py~=2.10.0
+tensorflow==1.14
