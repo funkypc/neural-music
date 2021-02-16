@@ -17,9 +17,10 @@ nn_input = None
 note_names = None
 n_vocab = None
 
-MODEL_DIR = 'g:/My Drive/MLData'
-MODEL_DIR2 = 'c:/MLData'
-GENERATED_DIR = 'C:/Users/User/projects/Python/Flask-App/static'
+# MODEL_DIR = 'g:/My Drive/MLData'
+# GENERATED_DIR = 'C:/Users/User/projects/Python/Flask-App/static'
+MODEL_DIR = './static'
+GENERATED_DIR = './static'
 
 # !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
 # !sh lilypond-2.22.0-1.linux-64.sh
