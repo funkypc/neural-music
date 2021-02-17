@@ -119,12 +119,11 @@ def generate_song(transpose=0, time_sig=44, length=64):
 
 def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
     # choose a random starting note
-    # random_start = np.random.randint(0, len(nn_input) - 1)
-    random_start = np.random.randint(0, 200)
+    random_start = np.random.randint(0, len(nn_input) - 1)
     sequence = nn_input[random_start]
     output = []
     # generate notes
-    for i in range(length):
+    for i in range(length+16):
         inputs = np.reshape(sequence, (1, len(sequence), 1))
         inputs = inputs / float(n_vocab)
         prediction = model.predict(inputs, verbose=0)
@@ -133,6 +132,9 @@ def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
         output.append(res)
         sequence = np.append(sequence, index)
         sequence = sequence[1:len(sequence)]
+    random_start = np.random.randint(0, len(output) - length - 1)
+    random_end = random_start + length
+    output = output[random_start:random_end]
     return output
 
 
