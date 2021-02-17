@@ -58,6 +58,7 @@ def login_post():
 # Check if user is authenticated
 @login_manager.user_loader
 def load_user(user_id):
+    global user
     if int(user_id) == user.id:
         return user
     # Return None of user is not authenticated
