@@ -43,6 +43,8 @@ def login():
 @app.route('/login', methods=['POST'])
 def login_post():
     global user
+    # recreate default user - bugfix
+    user = User()
     username = request.form.get('username')
     password = request.form.get('password')
     if username == user.username and password == user.password:
