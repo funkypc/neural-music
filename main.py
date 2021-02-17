@@ -17,7 +17,6 @@ login_manager.init_app(app)
 login_manager.login_view = "/login"
 app.secret_key = b'_6#e4F"S2Z8z\n\xec]/'
 song = None
-user = None
 
 
 # Index
