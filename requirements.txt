@@ -11,4 +11,4 @@ flask_wtf
 WTForms
 matplotlib
 h5py~=2.10.0
-tensorflow==1.14
+tensorflow==2.0.0
