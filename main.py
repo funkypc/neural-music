@@ -59,6 +59,7 @@ def login_post():
 @login_manager.user_loader
 def load_user(user_id):
     global user
+    user = User()  # bugfix user
     if int(user_id) == user.id:
         return user
     # Return None of user is not authenticated
@@ -167,7 +168,8 @@ class LoginForm(FlaskForm):
 class User(UserMixin):
     username = "user"
     password = "user"
-    id = random.randint(1000000, 9999999)  # Generate unique ID number at app startup
+    # id = random.randint(1000000, 9999999)  # Generate unique ID number at app startup
+    id = 123999  # bugfix hardcode for heroku deployment
 
 
 # init app
