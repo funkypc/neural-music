@@ -17,6 +17,7 @@ login_manager.init_app(app)
 login_manager.login_view = "/login"
 app.secret_key = b'_6#e4F"S2Z8z\n\xec]/'
 song = None
+user = None
 
 
 # Index
@@ -42,6 +43,7 @@ def login():
 
 @app.route('/login', methods=['POST'])
 def login_post():
+    global user
     username = request.form.get('username')
     password = request.form.get('password')
     if username == user.username and password == user.password:
