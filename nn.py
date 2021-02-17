@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import prince
 # import matplotlib.pyplot as plt
-# import tensorflow as tf
+import tensorflow
 # from midi2audio import FluidSynth
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
