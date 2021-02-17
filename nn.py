@@ -1,16 +1,16 @@
 import glob
 import pickle
-import dill
 import pandas as pd
 import numpy as np
 import prince
 # import matplotlib.pyplot as plt
-import tensorflow
+import tensorflow as tf
 # from midi2audio import FluidSynth
-from keras.models import Sequential, load_model
-from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
-from keras.utils import np_utils, plot_model
-from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding, BatchNormalization as BatchNorm
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras import utils as np_utils
+from tensorflow.keras.callbacks import ModelCheckpoint
 from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment, meter, bar
 
 # MODEL_DIR = 'g:/My Drive/MLData'
@@ -18,7 +18,7 @@ from music21 import converter, instrument, note, chord, interval, pitch, key, mi
 MODEL_DIR = './static'
 GENERATED_DIR = './static'
 
-model = dill.load(open(MODEL_DIR + '/model.dill', "rb"))
+
 nn_input = pickle.load(open(MODEL_DIR + '/nn_input.pkl', "rb"))
 note_names = pickle.load(open(MODEL_DIR + '/note_names.pkl', "rb"))
 n_vocab = pickle.load(open(MODEL_DIR + '/n_vocab.pkl', "rb"))
@@ -85,6 +85,11 @@ def parse_notes(stream):
 # def generate_song(model, nn_input, note_names, n_vocab):
 def generate_song(transpose=0, time_sig=44, length=64):
     # Get notes from neural network
+    # create model
+    model = create_model(nn_input, n_vocab)
+    # Load Weights
+    model.load_weights(
+        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
     notes = get_notes(model, nn_input, note_names, n_vocab, time_sig, length)
     s1 = stream.Stream()
     # Set Time Signature
@@ -236,7 +241,6 @@ def train_network(nn_input, nn_output, model):
 
 
 def init_network():
-    global model
     global nn_input
     global note_names
     global n_vocab
@@ -267,10 +271,9 @@ def init_network():
 
     # create model
     model = create_model(nn_input, n_vocab)
-
     # Load Weights
     model.load_weights(
-        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')  # Todo: try weights-82-0.4268 weights-136-0.1883.hdf5
+        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
 
     # Plot the model
     # plot_model(model, to_file=GENERATED_DIR + '/model_plot.png', show_shapes=True, show_layer_names=True)
@@ -279,14 +282,12 @@ def init_network():
     # train_network(nn_input, nn_output, model) # Uncomment to retrain the network
 
     # convert public variables to pickle
-    with open(MODEL_DIR + '/model.dill', 'wb') as filepath:
-        dill.dump(model, filepath)
-    with open(MODEL_DIR + '/nn_input.pkl', 'wb') as filepath:
-        pickle.dump(nn_input, filepath)
-    with open(MODEL_DIR + '/note_names.pkl', 'wb') as filepath:
-        pickle.dump(note_names, filepath)
-    with open(MODEL_DIR + '/n_vocab.pkl', 'wb') as filepath:
-        pickle.dump(n_vocab, filepath)
+    # with open(MODEL_DIR + '/nn_input.pkl', 'wb') as filepath:
+    #     pickle.dump(nn_input, filepath)
+    # with open(MODEL_DIR + '/note_names.pkl', 'wb') as filepath:
+    #     pickle.dump(note_names, filepath)
+    # with open(MODEL_DIR + '/n_vocab.pkl', 'wb') as filepath:
+    #     pickle.dump(n_vocab, filepath)
 
 
 if __name__ == "__main__":

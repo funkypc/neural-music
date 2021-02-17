@@ -144,7 +144,12 @@ def get_figure(name):
 
 def get_model_summary():
     summary = []
-    nn.model.summary(print_fn=lambda x: summary.append(x))
+    # create model
+    model = nn.create_model(nn.nn_input, nn.n_vocab)
+    # Load Weights
+    model.load_weights(
+        nn.MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
+    model.summary(print_fn=lambda x: summary.append(x))
     res = ''
     for line in summary:
         res += line + '<br>'
@@ -174,8 +179,8 @@ class User(UserMixin):
 
 # init app
 if __name__ == "__main__":
-    # init the neural network
-    nn.init_network()
+    # init the neural network - Not needed for deploy
+    # nn.init_network()
     # create default user
     user = User()
     # Run app

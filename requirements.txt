@@ -2,8 +2,6 @@ gunicorn
 pandas
 numpy
 prince
-dill
-Keras==2.3.0
 music21
 Flask
 flask_login
