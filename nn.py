@@ -1,5 +1,6 @@
 import glob
 import pickle
+import dill
 import pandas as pd
 import numpy as np
 import prince
@@ -12,15 +13,15 @@ from keras.utils import np_utils, plot_model
 from keras.callbacks import ModelCheckpoint
 from music21 import converter, instrument, note, chord, interval, pitch, key, midi, stream, environment, meter, bar
 
-model = None
-nn_input = None
-note_names = None
-n_vocab = None
-
 # MODEL_DIR = 'g:/My Drive/MLData'
 # GENERATED_DIR = 'C:/Users/User/projects/Python/Flask-App/static'
 MODEL_DIR = './static'
 GENERATED_DIR = './static'
+
+model = dill.load(open(MODEL_DIR + '/model.dill', "rb"))
+nn_input = pickle.load(open(MODEL_DIR + '/nn_input.pkl', "rb"))
+note_names = pickle.load(open(MODEL_DIR + '/note_names.pkl', "rb"))
+n_vocab = pickle.load(open(MODEL_DIR + '/n_vocab.pkl', "rb"))
 
 # !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
 # !sh lilypond-2.22.0-1.linux-64.sh
@@ -276,6 +277,16 @@ def init_network():
 
     # Train the network
     # train_network(nn_input, nn_output, model) # Uncomment to retrain the network
+
+    # convert public variables to pickle
+    with open(MODEL_DIR + '/model.dill', 'wb') as filepath:
+        dill.dump(model, filepath)
+    with open(MODEL_DIR + '/nn_input.pkl', 'wb') as filepath:
+        pickle.dump(nn_input, filepath)
+    with open(MODEL_DIR + '/note_names.pkl', 'wb') as filepath:
+        pickle.dump(note_names, filepath)
+    with open(MODEL_DIR + '/n_vocab.pkl', 'wb') as filepath:
+        pickle.dump(n_vocab, filepath)
 
 
 if __name__ == "__main__":
