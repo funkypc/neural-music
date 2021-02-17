@@ -1,6 +1,6 @@
 gunicorn
 pandas
-numpy
+numpy==1.19.5
 prince
 music21
 Flask
