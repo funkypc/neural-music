@@ -19,14 +19,14 @@ app.secret_key = b'_6#e4F"S2Z8z\n\xec]/'
 song = None
 
 
-# Index
+# Index - Authenticated users only
 @app.route('/')
 @login_required
 def index():
     return render_template("index.html", generate_song=generate_song, song=song)
 
 
-# Visualization
+# Visualization - Authenticated users only
 @app.route('/visualization')
 @login_required
 def visualization():
@@ -40,6 +40,7 @@ def login():
     return render_template("login.html", form=form)
 
 
+# Login POST method
 @app.route('/login', methods=['POST'])
 def login_post():
     global user
@@ -74,6 +75,7 @@ def logout():
     return redirect("/login")
 
 
+# Generate song
 @app.route('/generate_song')
 @app.route('/generate_song/<path:transpose>/<path:time_sig>/<path:length>')
 @login_required
@@ -90,13 +92,14 @@ def generate_song(transpose=0, time_sig=44, length=32):
     return redirect("/")
 
 
+# Get file without using cache
 @app.route('/media/<path:filename>')
 @login_required
 def get_media(filename):
     return send_from_directory('static/', filename, cache_timeout=0)
 
 
-# Get figure for visualization
+# Get a matplotlib figure for visualization. Embed in html.
 def get_figure(name):
     # Generate figure
     if name is "note_frequency":
@@ -142,13 +145,11 @@ def get_figure(name):
     return f"<img src='data:image/png;base64,{data}' style='max-width:100%'/>"
 
 
+# Get summary of Neural Network model to display to the user
 def get_model_summary():
     summary = []
     # create model
     model = nn.create_model(nn.nn_input, nn.n_vocab)
-    # Load Weights
-    model.load_weights(
-        nn.MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
     model.summary(print_fn=lambda x: summary.append(x))
     res = ''
     for line in summary:
@@ -158,14 +159,8 @@ def get_model_summary():
 
 # Class to create login form
 class LoginForm(FlaskForm):
-    username = StringField(
-        '',
-        [DataRequired()]
-    )
-    password = PasswordField(
-        '',
-        [DataRequired()]
-    )
+    username = StringField('', [DataRequired()])
+    password = PasswordField('', [DataRequired()])
     submit = SubmitField('Sign in')
 
 
@@ -173,14 +168,12 @@ class LoginForm(FlaskForm):
 class User(UserMixin):
     username = "user"
     password = "user"
-    # id = random.randint(1000000, 9999999)  # Generate unique ID number at app startup
-    id = 123999  # bugfix hardcode for heroku deployment
+    random.seed(27)
+    id = random.randint(1000000, 9999999)  # Generate unique ID number at app startup
 
 
 # init app
 if __name__ == "__main__":
-    # init the neural network - Not needed for deploy
-    # nn.init_network()
     # create default user
     user = User()
     # Run app
