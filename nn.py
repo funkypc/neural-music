@@ -23,74 +23,54 @@ nn_input = pickle.load(open(MODEL_DIR + '/nn_input.pkl', "rb"))
 note_names = pickle.load(open(MODEL_DIR + '/note_names.pkl', "rb"))
 n_vocab = pickle.load(open(MODEL_DIR + '/n_vocab.pkl', "rb"))
 
-# !wget https://lilypond.org/download/binaries/linux-64/lilypond-2.22.0-1.linux-64.sh
-# !sh lilypond-2.22.0-1.linux-64.sh
 
-# Install dependencies
-# !sudo apt-get install musescore
-# !sudo apt-get install fluidsynth
-# !pip install midi2audio
-
-# Create the user environment for music21
-# !whereis musescore
-us = environment.UserSettings()
-us['musicxmlPath'] = MODEL_DIR
-us['musescoreDirectPNGPath'] = MODEL_DIR
-us['graphicsPath'] = MODEL_DIR  # should be the application to open png file when using lilypond
-us['lilypondPath'] = MODEL_DIR
-
-
-# us['directoryScratch'] = 'drive/MyDrive/MLData/output' # Where to output temporary png files
-
-# %env QT_QPA_PLATFORM=offscreen
-
+# Parse the midi files and dump all notes to file
 def parse_midi():
     notes = np.array([])
     for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
-        stream = converter.parse(filename)
-        sNew = change_key(stream)
-        notes = np.append(notes, parse_notes(sNew))
+        stream1 = converter.parse(filename)
+        # transpose all midi streams to key of C
+        stream1 = change_key(stream1)
+        # append notes to stream
+        notes = np.append(notes, parse_notes(stream1))
     # write notes to file
     with open(MODEL_DIR + '/notes', 'wb') as filepath:
         pickle.dump(notes, filepath)
 
 
-# Converts all midi data in the same key
-def change_key(stream, key_sig='C'):
-    k = stream.analyze('key')
+# Transpose all songs (streams) into key of C
+def change_key(stream1, key_sig='C'):
+    k = stream1.analyze('key')
     i = interval.Interval(k.getScale('major').tonic, pitch.Pitch(key_sig))
-    sNew = stream.transpose(i)
-    return sNew
+    stream1 = stream1.transpose(i)
+    return stream1
 
 
-def parse_notes(stream):
+def parse_notes(stream1):
     notes = np.array([])
-    notes_to_parse = None
-    ks = key.Key('C')  # set key signature
-    try:  # stream has multiple instruments
-        s2 = instrument.partitionByInstrument(stream)
+    ks = key.Key('C')  # set key signature to C major
+    try:  # if stream has multiple instruments
+        s2 = instrument.partitionByInstrument(stream1)
         notes_to_parse = s2.parts[0].recurse()
-    except:  # stream has flat structure
-        notes_to_parse = stream.flat.notes
+    except:  # else stream has flat structure
+        notes_to_parse = stream1.flat.notes
     for item in notes_to_parse:
         if isinstance(item, note.Note):
-            # Fix incorrect notes # TODO plot
-            nStep = item.pitch.step
-            rightAccidental = ks.accidentalByStep(nStep)
-            item.pitch.accidental = rightAccidental
+            # Bump notes not in key signature to closest note in key signature
+            n_step = item.pitch.step
+            right_accidental = ks.accidentalByStep(n_step)
+            item.pitch.accidental = right_accidental
             notes = np.append(notes, str(item.pitch))
     return notes
 
 
-# def generate_song(model, nn_input, note_names, n_vocab):
+# Generate a song using LSTM RNN
 def generate_song(transpose=0, time_sig=44, length=64):
     # Get notes from neural network
     # create model
     model = create_model(nn_input, n_vocab)
-    # Load Weights
-    model.load_weights(
-        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
-    notes = get_notes(model, nn_input, note_names, n_vocab, time_sig, length)
+    # Get sequence of notes from Neural Network
+    notes = get_notes(model, nn_input, note_names, n_vocab, length)
     s1 = stream.Stream()
     # Set Time Signature
     ts = meter.TimeSignature('4/4')
@@ -103,21 +83,21 @@ def generate_song(transpose=0, time_sig=44, length=64):
     for n in notes:
         # Append all notes as quarter notes
         s1.append(note.Note(n, type='quarter'))
-    # Generate Music Score using lilypond - not needed. Done in html and js
+    # Generate music score using lilypond - Unused. Currently score image is created with html-midi-player in index.html
     # s1.write('lily.png', GENERATED_DIR + '/score')  # generates score.png
-    # Transpose notes
+    # Transpose song
     if transpose != 0:
         a_interval = interval.Interval(transpose)
         s1.transpose(a_interval, inPlace=True)
     # Create midi file from notes
     fp = s1.write('midi', fp=GENERATED_DIR + '/output.mid')
-    # Convert midi file to audio using FluidSynth - Not needed. Done in html and js
+    # Convert midi file to audio using FluidSynth - Unused. Done in html with html-midi-player.
     # fs = FluidSynth('c:\MLData\Yamaha-Grand-Lite-v2.0.sf2')
-    # fs.play_midi(GENERATED_DIR + '/output.mid')
     # fs.midi_to_audio(GENERATED_DIR + '/output.mid', GENERATED_DIR + '/output.wav')
 
 
-def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
+# Get sequence of notes from Neural Network
+def get_notes(model, nn_input, note_names, n_vocab, length):
     # choose a random starting note
     random_start = np.random.randint(0, len(nn_input) - 1)
     sequence = nn_input[random_start]
@@ -126,6 +106,7 @@ def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
     for i in range(length+16):
         inputs = np.reshape(sequence, (1, len(sequence), 1))
         inputs = inputs / float(n_vocab)
+        # Predict next note
         prediction = model.predict(inputs, verbose=0)
         index = np.argmax(prediction)
         res = note_names[index]
@@ -138,8 +119,8 @@ def get_notes(model, nn_input, note_names, n_vocab, time_sig, length):
     return output
 
 
+# Generate Multiple Correspondence Analysis (MCA) graph for data visualization
 def generate_mca_graph():
-    # Generate Multiple Correspondence Analysis (MCA) graph
     df = get_stream_df()
     X = df
     mca = prince.MCA()
@@ -148,13 +129,12 @@ def generate_mca_graph():
 
 
 def get_stream_df():
-    # Uncomment to recreate dataframe
-
-    # s1 = stream.Stream()
-    # for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
-    #     s1.append(converter.parse(filename))
-    # df = generate_dataframe(s1)
-    # df.to_pickle(MODEL_DIR + "/midi_df.pkl")
+    # Recreate dataframe
+    s1 = stream.Stream()
+    for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
+        s1.append(converter.parse(filename))
+    df = generate_dataframe(s1)
+    df.to_pickle(MODEL_DIR + "/midi_df.pkl")
 
     # Read DataFrame from file
     df = pd.read_pickle(MODEL_DIR + "/midi_df.pkl")
@@ -163,27 +143,27 @@ def get_stream_df():
     # Convert fields to numerical
     df = df.astype({'Offset': 'float'})
     df = df.astype({'Duration': 'float'})
-    # Cleanup outliers in Duration
-    df = df[np.abs(df.Duration - df.Duration.mean()) <= (3 * df.Duration.std())]  # keep to 3 standard deviations.
+    # Cleanup outliers in Duration. Keep to 3 standard deviations
+    df = df[np.abs(df.Duration - df.Duration.mean()) <= (3 * df.Duration.std())]
     return df
 
 
-def generate_dataframe(part):
-    # parts = s.parts
+# Generate pandas dataFrame from stream
+def generate_dataframe(stream1):
     rows_list = []
-    # for part in parts:
-    for index, elt in enumerate(part.flat.stripTies(retainContainers=True).getElementsByClass(
+    for index, elt in enumerate(stream1.flat.stripTies(retainContainers=True).getElementsByClass(
             [note.Note, note.Rest, chord.Chord, bar.Barline])):
         if hasattr(elt, 'pitches'):
             pitches = elt.pitches
             for pitch in pitches:
-                rows_list.append(generate_row(elt, part, pitch.pitchClass))
+                rows_list.append(generate_row(elt, stream1, pitch.pitchClass))
             else:
-                rows_list.append(generate_row(elt, part))
+                rows_list.append(generate_row(elt, stream1))
     return pd.DataFrame(rows_list)
 
 
-def generate_row(mus_object, part, pitch_class=np.nan):
+# Generate row in dataframe
+def generate_row(mus_object, stream1, pitch_class=np.nan):
     d = {}
     try:
         pitch = mus_object.pitch
@@ -197,6 +177,7 @@ def generate_row(mus_object, part, pitch_class=np.nan):
     return d
 
 
+# Create LSTM Recurrent Neural Network model
 def create_model(nn_input, n_vocab):
     # Generate notes using Recurring Neural Network (RNN)
     # Create model
@@ -216,25 +197,28 @@ def create_model(nn_input, n_vocab):
     model1.add(Dense(n_vocab))
     model1.add(Activation('softmax'))
     model1.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+    # Load Weights
+    model1.load_weights(MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
 
     return model1
 
 
+# Train the Neural Network
 def train_network(nn_input, nn_output, model):
     # OneHotEncode nn_output
     nn_output = np_utils.to_categorical(nn_output)
     # train the network
-    weightsfile = MODEL_DIR + '/weights/weights-{epoch:02d}-{loss:.4f}.hdf5'
-    checkpoint = ModelCheckpoint(weightsfile, monitor='loss', verbose=0, save_best_only=True, mode='min')
+    weights_file = MODEL_DIR + '/weights/weights-{epoch:02d}-{loss:.4f}.hdf5'
+    checkpoint = ModelCheckpoint(weights_file, monitor='loss', verbose=0, save_best_only=True, mode='min')
     callbacks_list = [checkpoint]
     # Load history
-    # history = pickle.load(open('/trainHistoryDict', "rb"))
-    # Create history
+    # history = pickle.load(open(MODEL_DIR + '/trainHistoryDict', "rb"))
+    # Create history with 200 epochs
     history = model.fit(nn_input, nn_output, epochs=200, batch_size=100, callbacks=callbacks_list)
-    # Save history to plot from later
-    with open('/trainHistoryDict', 'wb') as file_pi:
+    # Save history to file
+    with open(MODEL_DIR + '/trainHistoryDict', 'wb') as file_pi:
         pickle.dump(history.history, file_pi)
-    # Uncomment to plot history
+    # Plot history
     # plt.plot(history.history['loss'])
     # plt.title('model loss')
     # plt.ylabel('loss')
@@ -242,6 +226,7 @@ def train_network(nn_input, nn_output, model):
     # plt.show()
 
 
+# Initialize the network.
 def init_network():
     global nn_input
     global note_names
@@ -273,23 +258,20 @@ def init_network():
 
     # create model
     model = create_model(nn_input, n_vocab)
-    # Load Weights
-    model.load_weights(
-        MODEL_DIR + '/weights/weights-136-0.1883.hdf5')
 
     # Plot the model
-    # plot_model(model, to_file=GENERATED_DIR + '/model_plot.png', show_shapes=True, show_layer_names=True)
+    plot_model(model, to_file=GENERATED_DIR + '/model_plot.png', show_shapes=True, show_layer_names=True)
 
     # Train the network
-    # train_network(nn_input, nn_output, model) # Uncomment to retrain the network
+    train_network(nn_input, nn_output, model)
 
     # convert public variables to pickle
-    # with open(MODEL_DIR + '/nn_input.pkl', 'wb') as filepath:
-    #     pickle.dump(nn_input, filepath)
-    # with open(MODEL_DIR + '/note_names.pkl', 'wb') as filepath:
-    #     pickle.dump(note_names, filepath)
-    # with open(MODEL_DIR + '/n_vocab.pkl', 'wb') as filepath:
-    #     pickle.dump(n_vocab, filepath)
+    with open(MODEL_DIR + '/nn_input.pkl', 'wb') as filepath:
+        pickle.dump(nn_input, filepath)
+    with open(MODEL_DIR + '/note_names.pkl', 'wb') as filepath:
+        pickle.dump(note_names, filepath)
+    with open(MODEL_DIR + '/n_vocab.pkl', 'wb') as filepath:
+        pickle.dump(n_vocab, filepath)
 
 
 if __name__ == "__main__":
