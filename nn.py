@@ -29,10 +29,12 @@ def parse_midi():
     notes = np.array([])
     for filename in glob.glob(MODEL_DIR + "/midi_songs/*.mid"):
         stream1 = converter.parse(filename)
-        # transpose all midi streams to key of C
+        # transpose midi stream to key of C
         stream1 = change_key(stream1)
-        # append notes to stream
-        notes = np.append(notes, parse_notes(stream1))
+        # fix notes not in key of C
+        notes_array = parse_notes(stream1)
+        # append notes to array
+        notes = np.append(notes, notes_array)
     # write notes to file
     with open(MODEL_DIR + '/notes', 'wb') as filepath:
         pickle.dump(notes, filepath)
