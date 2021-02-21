@@ -276,6 +276,7 @@ def init_network():
         pickle.dump(n_vocab, filepath)
 
 
+# init network and retrain model
 if __name__ == "__main__":
     init_network()
     generate_song()
