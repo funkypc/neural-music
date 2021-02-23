@@ -147,13 +147,15 @@ def get_figure(name):
 
 # Get summary of Neural Network model to display to the user
 def get_model_summary():
-    summary = []
-    # create model
-    model = nn.create_model(nn.nn_input, nn.n_vocab)
-    model.summary(print_fn=lambda x: summary.append(x))
-    res = ''
-    for line in summary:
-        res += line + '<br>'
+    # summary = []
+    # # create model
+    # model = nn.create_model(nn.nn_input, nn.n_vocab)
+    # model.summary(print_fn=lambda x: summary.append(x))
+    # res = ''
+    # for line in summary:
+    #     res += line + '<br>'
+    # # Return hard-coded model details to save memory
+    res = 'Model: "sequential"<br>_________________________________________________________________<br>Layer (type)                 Output Shape              Param #   <br>=================================================================<br>lstm (LSTM)                  (None, 8, 512)            1052672   <br>_________________________________________________________________<br>lstm_1 (LSTM)                (None, 8, 512)            2099200   <br>_________________________________________________________________<br>lstm_2 (LSTM)                (None, 512)               2099200   <br>_________________________________________________________________<br>batch_normalization (BatchNo (None, 512)               2048      <br>_________________________________________________________________<br>dropout (Dropout)            (None, 512)               0         <br>_________________________________________________________________<br>dense (Dense)                (None, 256)               131328    <br>_________________________________________________________________<br>activation (Activation)      (None, 256)               0         <br>_________________________________________________________________<br>batch_normalization_1 (Batch (None, 256)               1024      <br>_________________________________________________________________<br>dropout_1 (Dropout)          (None, 256)               0         <br>_________________________________________________________________<br>dense_1 (Dense)              (None, 48)                12336     <br>_________________________________________________________________<br>activation_1 (Activation)    (None, 48)                0         <br>=================================================================<br>Total params: 5,397,808<br>Trainable params: 5,396,272<br>Non-trainable params: 1,536<br>_________________________________________________________________<br>'
     return res
 
 

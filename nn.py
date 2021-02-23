@@ -1,3 +1,4 @@
+import gc
 import glob
 import pickle
 import pandas as pd
@@ -96,6 +97,9 @@ def generate_song(transpose=0, time_sig=44, length=64):
     # Convert midi file to audio using FluidSynth - Unused. Done in html with html-midi-player.
     # fs = FluidSynth('c:\MLData\Yamaha-Grand-Lite-v2.0.sf2')
     # fs.midi_to_audio(GENERATED_DIR + '/output.mid', GENERATED_DIR + '/output.wav')
+    # Cleanup model
+    del model
+    gc.collect()
 
 
 # Get sequence of notes from Neural Network
